@@ -1,18 +1,14 @@
-#!user/bin/env python
 # -*- coding:utf-8 -*-
-"""Stereographic-Projection-of-Otto:
-@File: main.py
-@Brief: 通过球极投影的方式得到otto的多种形态。
-@Author: Golevka2001<gol3vka@163.com>
-@Created Date: 2022/11/29
-@Last Modified Date: 2022/12/02
-"""
 
 # 开导：
-import os
+from pathlib import Path
+
+from rich import print
+from rich import progress
+
+from numba import jit
 
 import numpy as np
-import pygame
 from PIL import Image
 
 # --------------- 参数部分 --------------- #
@@ -23,6 +19,7 @@ path_img = './otto.png'
 path_proj = './toot.png'
 
 # 投影图像输出尺寸（单位：像素）：
+prevent_scaling = True # 使用原始大小
 w_proj = 400
 h_proj = 300
 
@@ -42,7 +39,7 @@ gamma = 0 * np.pi / 180  # 绕z轴旋转角度
 
 # --------------- 实现 --------------- #
 
-
+@jit(nopython=True)
 def get_point_on_sphere(point: np.ndarray, r: float) -> np.ndarray:
     """计算z=0平面上一点Q与投影点D连线在球面上的交点P的坐标
 
@@ -55,9 +52,9 @@ def get_point_on_sphere(point: np.ndarray, r: float) -> np.ndarray:
     """
     [x, y, z] = point
     k = 2 * r**2 / (x**2 + y**2 + r**2)  # 推导、化简得到的系数（推导过程见README.md）
-    return np.array([k * x, k * y, (k - 1) * r], dtype=np.float32)
+    return np.array([k * x, k * y, (k - 1) * r], dtype=np.float64)
 
-
+@jit(nopython=True)
 def axis_rotate(point: np.ndarray, rot_mat: np.ndarray) -> np.ndarray:
     """计算坐标系旋转后，点P坐标的变化
 
@@ -68,9 +65,10 @@ def axis_rotate(point: np.ndarray, rot_mat: np.ndarray) -> np.ndarray:
     Returns:
         np.ndarray: 变换后的点P坐标
     """
+    
     return np.dot(rot_mat, point)
 
-
+@jit(nopython=True)
 def get_pix_on_img(point: np.ndarray, r: float, h_img: int,
                    w_img: int) -> tuple:
     """球面投影的逆过程，计算球面上一点P在原图像上的坐标
@@ -94,7 +92,7 @@ def get_pix_on_img(point: np.ndarray, r: float, h_img: int,
     col = round(col * w_img) % w_img
     return (row, col)
 
-
+@jit(nopython=True)
 def projection(pix_proj: tuple, r: float, h_img: int, w_img: int, h_proj: int,
                w_proj: int) -> tuple:
     """球极投影
@@ -122,21 +120,21 @@ def projection(pix_proj: tuple, r: float, h_img: int, w_img: int, h_proj: int,
 
 
 if __name__ == '__main__':
-    pygame.mixer.init()
-    pygame.mixer.music.load('bgm.wav')
-    pygame.mixer.music.set_volume(0.3)
-    pygame.mixer.music.play()
+    path_img = Path(path_img).resolve()
+    path_proj = Path(path_proj).resolve()
 
-    path_img = os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                            path_img)
-    path_proj = os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                             path_proj)
-
-    arr_img = np.array(Image.open(path_img))
-    arr_proj = np.zeros((h_proj, w_proj, 3), dtype=np.uint8)
+    arr_img = np.array(Image.open(path_img).convert('RGB'))
 
     h_img = arr_img.shape[0]
     w_img = arr_img.shape[1]
+
+    print(f'[green]Image size:[/green] [bold][white]{w_img}x{h_img}[/white][/bold]')
+
+    if prevent_scaling:
+        h_proj = h_img
+        w_proj = w_img
+
+    arr_proj = np.zeros((h_proj, w_proj, 3), dtype=np.uint8)
 
     r = min(h_proj, w_proj) / 10 * scale  # 球的半径会影响到投影图像上呈现内容的多少
 
@@ -163,14 +161,15 @@ if __name__ == '__main__':
 
     # 即把目标图像平铺在xy平面上（图片中心在O，所以注意坐标的范围）
     # 遍历每一个像素点，得到在球上的交点坐标，再由球面投影的逆变换对应到原图像上的像素点
-    for pix_proj in np.ndindex(arr_proj.shape[:2]):
-        pix_img = projection(pix_proj, r, h_img, w_img, h_proj, w_proj)
-        arr_proj[pix_proj] = arr_img[pix_img]
+    with progress.Progress() as progress:
+        task = progress.add_task("[red]Processing...", total=h_proj * w_proj)
+        for pix_proj in np.ndindex(arr_proj.shape[:2]):
+            pix_img = projection(pix_proj, r, h_img, w_img, h_proj, w_proj)
+            arr_proj[pix_proj] = arr_img[pix_img]
+            progress.update(task, advance=1)
 
-    pygame.mixer.music.unload()
-    pygame.mixer.music.load('dududu.mp3')
-    pygame.mixer.music.set_volume(0.8)
-    pygame.mixer.music.play()
+    print(f'[green]Finished.[/green]')
 
-    Image.fromarray(arr_proj).show()  # 注释掉这行可以不弹出显示
-    # Image.fromarray(arr_proj).save(path_proj)  # 注释掉这行可以不输出文件
+    # Image.fromarray(arr_proj).show()  # 注释掉这行可以不弹出显示
+    Image.fromarray(arr_proj).save(path_proj)  # 注释掉这行可以不输出文件
+    print(f'[green]Image saved to:[/green] [bold]{path_proj}[/bold]')

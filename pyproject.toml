@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "stereographic-projection-of-otto"
+version = "0.1.0"
+description = "通过球极投影得到 otto 的多种形态"
+authors = ["Golevka2001 <gol3vka@163.com>", "d0j1a_1701 <dajia1701@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11.0,<3.13.0"
+rich = "^13.6.0"
+pillow = "^10.1.0"
+numpy = "^1.26.1"
+numba = "^0.58.1"
+scipy = "^1.11.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
