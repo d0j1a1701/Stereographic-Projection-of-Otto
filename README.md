@@ -433,28 +433,23 @@ $$
 
 ## 使用说明
 
-本项目使用 Python 编写，依赖 numpy 库进行主要的数学运算。
+本项目使用 Python 编写，依赖 numpy 库进行主要的数学运算，通过 numba 进行 JIT 加速。
 
-### 下载 & 解压
+### 安装依赖
 
-点击右上方的绿色 ```Code``` 按钮，在下拉菜单中点击 ```Download ZIP```
-下载完成后，把它解压到你想要的位置。
-
-### 配置 Python 环境
-
-略。
-
-### 安装依赖库
+你需要有一个带有 [Poetry](https://python-poetry.org/) 的 [Python](https://www.python.org/) 环境（推荐 Python 3.11）
 
 ```bash
-pip install numpy
+git clone https://github.com/d0j1a1701/Stereographic-Projection-of-Otto.git
+cd Stereographic-Projection-of-Otto
+poetry install
 ```
 
 ### 运行
 
 编辑 ```main.py``` 文件，按需修改开头部分的相关参数。
 
-参数调整完成后，编译运行，在所设定的输出路径下找到生成的投影图像。
+参数调整完成后，使用命令 `poetry run python main.py` 运行，在所设定的输出路径下找到生成的投影图像。
 
 ### 参数说明
 
